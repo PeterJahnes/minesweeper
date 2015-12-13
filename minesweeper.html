@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>minesweeper</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+	<script type="text/javascript">
+		var gameRunning = false;
+		var $currentDiv = null;
+		var $oldDiv = null;
+		var leftButtonDown = false;
+		var rightButtonDown = false;
+		var bothButtonDown = false;
+		var clickLock = false;
+		$(document).on('ready page:load', function(){
+
+			$('#settings_show_button').on('click', function(){
+				$('#settings').show();
+				$('#settings_show_button').hide();
+				$('#settings_hide_button').show();
+			});
+
+			$('#settings_hide_button').on('click', function(){
+				$('#settings').hide();
+				$('#settings_hide_button').hide();
+				$('#settings_show_button').show();
+			});
+
+			$('#start_form').on('submit', function(event){
+				event.preventDefault();
+				var height = $('#height').val();
+				var width = $('#width').val();
+				var numberOfBombs = $('#number_of_bombs').val();
+				create_board(height, width, numberOfBombs);
+			});
+
+			$('#minefield').on('mousedown','.sector', function(event){
+				event.preventDefault();
+				$currentDiv = $(this);
+				$('#minefield').on('mouseenter', '.sector', mouseOverCheck );
+				$('#minefield').on('mouseleave', '.sector', mouseOutCheck );
+				if (gameRunning === true) {
+					if (event.which === 1) {
+						leftButtonDown = true;
+						var thisSector = findSector($(this).attr('x'),$(this).attr('y'));
+						if (thisSector.isFlagged === false) {
+							activateDiv($currentDiv);
+						}
+					} else if (event.which === 3) {
+						rightButtonDown = true;
+					};
+				};
+			});
+
+			$('#minefield').on('mouseup','.sector', function(event){
+				event.preventDefault();
+				var activeDiv = $(this);
+				var thisSector = findSector($(this).attr('x'),$(this).attr('y'));
+				if (gameRunning === true) {
+					if (clickLock === false) {
+						if (event.which === 1) {
+							if (rightButtonDown === true) {
+								console.log('1');
+								bothButtonDown = true;
+								leftButtonDown = false;
+							} else if (bothButtonDown === true) {
+								console.log('2');
+								checkNeighborBombCount(thisSector,activeDiv);
+								bothButtonDown = false;
+								leftButtonDown = false;
+							} else {
+								if (thisSector.isBomb === true) {
+								console.log('3');
+									endGame($(this));
+									gameRunning = false;
+								} else {
+								console.log('4');
+									thisSector.opened = true;
+									$(this).text(checkNeighbor(thisSector));
+								};
+								console.log('5');
+								leftButtonDown = false;
+							};
+						} else if (event.which === 3) {
+							if (leftButtonDown === true) {
+								console.log('6');
+								bothButtonDown = true;
+								rightButtonDown = false;
+							} else if (bothButtonDown === true) {
+								console.log('7');
+								checkNeighborBombCount(thisSector,activeDiv);
+								bothButtonDown = false;
+								rightButtonDown = false;
+							} else {
+								console.log('8');
+								flagToggle(thisSector);
+								rightButtonDown = false;
+							};
+						};
+						$currentDiv = null;
+						wonGame();
+					} else {
+						resetDiv($currentDiv);
+						wonGame();
+					};
+				};
+				$('#minefield').off('mouseenter','.sector', mouseOverCheck);
+				$('#minefield').off('mouseleave','.sector',mouseOutCheck);
+			});
+
+			// $('#minefield').on('mouseover','.sector', function(event){
+			// 	if (rightButtonDown === true || leftButtonDown === true) {
+			// 		if ( this.isEqualNode($currentDiv)) {
+			// 			clickLock = false;
+			// 			console.log('clickLock false')
+			// 		} else {
+			// 			clickLock = true;
+			// 			console.log('clickLock true')
+			// 		};
+			// 	};
+			// });
+
+			create_board(10, 10, 10);
+		});	
+
+		var minefield = [];
+
+		var create_board = function(height, width, numberOfBombs){
+			minefield = [];
+			$('#minefield').empty();
+			var sectors = [];
+			var bombCount = numberOfBombs;
+			for (var i = 0; i < height*width; i++) {
+				sectors.push(new Sector(bombCounter(bombCount)));
+				bombCount--;
+			};
+			sectors.sort(function() {
+			  return .5 - Math.random();
+			});
+			for (var i = 0; i < height; i++) {
+				minefield.push([]);
+				$('#minefield').append($('#row').html());
+				for (var k = 0; k < width; k++) {
+					var newSector = sectors.pop();
+					newSector.x = i;
+					newSector.y = k;
+					minefield[i].push(newSector);
+					var sectorDiv = $('<div />', {
+		        "class": 'sector',
+		        "x": i.toString(),
+		        "y": k.toString(),
+		      });
+					$('#minefield>div:nth-child(' + (i + 1) + ')').append(sectorDiv);
+				};
+			};
+			$('#minefield').css({"height" : (minefield.length*42 + "px"),"width" : (minefield[0].length*42 + "px")});
+			gameRunning = true;
+		};
+
+		var endGame = function(theSector){
+			if (gameRunning === true) {
+				theSector.css({'border-style': 'inset', 'border-color':'lightgrey', 'font-size':'3em', 'line-height' : '45px', 'background-color':'red'});
+				theSector.text('*');
+				$('#minefield').off('mouseenter','.sector', mouseOverCheck);
+				$('#minefield').off('mouseleave','.sector',mouseOutCheck);
+				alert('game over man!');
+			};
+		};
+
+		var wonGame = function() {
+			var closed = 0;
+			for (var i = 0; i < minefield.length; i++) {
+				for (var j = 0; j < minefield[i].length; j++) {
+					if (minefield[i][j].isBomb === false && minefield[i][j].opened === false){
+						closed++;
+					};
+				};
+			};
+			if (closed > 0){
+				return false;
+			} else {
+				for (var i = 0; i < minefield.length; i++) {
+					for (var j = 0; j < minefield[i].length; j++) {
+						if (minefield[i][j].isBomb === true && minefield[i][j].isFlagged === false){
+							flagToggle(minefield[i][j]);
+						};
+					};
+				};
+				gameRunning = false;
+				$('#minefield').off('mouseenter','.sector', mouseOverCheck);
+				$('#minefield').off('mouseleave','.sector',mouseOutCheck);
+				alert('you win!');
+			};
+		};
+
+		var bombCounter = function(number){
+			if (number > 0) {
+				return true;
+			} else {
+				return false;
+			};
+		};
+
+		var findSector = function(x,y){
+			return minefield[x][y];
+		};
+
+		var checkNeighborBombCount = function(thisSector,activeDiv) {
+			if (thisSector.opened === true) {
+				var data = checkNeighborBombFlag(thisSector);
+				//console.log(data.flags);
+				//console.log(data.bombs);
+				if (data.flags === data.bombs){
+					openNeighbors(thisSector);
+				};
+			} else {
+				resetDiv(activeDiv);
+			};
+		};
+
+		var checkNeighborBombFlag = function(thisSector) {
+			var flagNumber = 0;
+			var bombNumber = 0;
+			var neighbors = findNeighbors(thisSector);
+			for (var i = 0; i < neighbors.length; i++) {
+				if (minefield[neighbors[i][0]][neighbors[i][1]].isBomb === true) {
+					bombNumber++;
+				};
+				if (minefield[neighbors[i][0]][neighbors[i][1]].isFlagged === true) {
+					flagNumber++;
+				};
+			};
+			return {'flags':flagNumber,'bombs':bombNumber};
+		};
+
+		var openNeighbors = function(thisSector){
+			var neighbors = findNeighbors(thisSector);
+			var neighborsObjects = findneighborsObjects(neighbors);
+			for (var i = 0; i < neighborsObjects.length; i++) {
+				var $thediv = $("#minefield>.row>.sector[x='" + neighborsObjects[i].x + "'][y='" + neighborsObjects[i].y + "']");
+				if (neighborsObjects[i].isFlagged === true || neighborsObjects[i].opened === true){
+				} else if (neighborsObjects[i].isBomb === true) {
+					endGame($thediv);
+					gameRunning = false;
+				} else {
+					neighborsObjects[i].opened = true;
+					$thediv.text(checkNeighbor(neighborsObjects[i]));
+					$thediv.css({'border-style': 'inset', 'border-color':'lightgrey'});
+				};
+			};
+		};
+
+		var findneighborsObjects = function(neighbors){
+			var theObjects = [];
+			for (var i = 0; i < neighbors.length; i++) {
+				theObjects.push(minefield[neighbors[i][0]][neighbors[i][1]]);
+			};
+			return theObjects;
+		};
+
+		var checkNeighbor = function(sector){
+			var bombNumber = 0;
+			var neighbors = findNeighbors(sector);
+			for (var i = 0; i < neighbors.length; i++) {
+				if (minefield[neighbors[i][0]][neighbors[i][1]].isBomb === true) {
+					bombNumber++;
+				};
+			};
+			if (bombNumber === 0) {
+				openNeighbors(sector);
+				return '';
+			} else {
+				return bombNumber;
+			};
+		};
+
+		var findNeighbors = function(sector){
+			var x = sector.x;
+			var y = sector.y;
+			var neighbors = [[x+1,y-1],[x+1,y],[x+1,y+1],[x,y-1],[x,y+1],[x-1,y-1],[x-1,y],[x-1,y+1]];
+			var realNeighbors = neighbors.filter( function(item) {
+			    return (item[0] >= 0 && item[0] < minefield.length && item[1] >= 0 && item[1] < minefield[0].length);
+			});
+			return realNeighbors;
+		}
+
+		var flagToggle = function(thisSector) {
+			var $thediv = $("#minefield>.row>.sector[x='" + thisSector.x + "'][y='" + thisSector.y + "']");
+			if (thisSector.isFlagged === false && thisSector.opened === false) {
+				thisSector.isFlagged = true;
+				$thediv.css('color', 'red');
+				$thediv.text('P');
+				// resetDiv($currentDiv);
+			} else if (thisSector.isFlagged === true && thisSector.opened === false) {
+				thisSector.isFlagged = false;
+				$thediv.css('color', 'black');
+				$thediv.text('');
+				// resetDiv($currentDiv);
+			};
+		};
+		var mouseOverCheck =  function(event) {
+			$oldDiv = $currentDiv;
+			console.log('mouse ENTER');
+			console.log($oldDiv.attr('x'));
+			console.log($currentDiv.attr('x'));
+			$currentDiv = $(this);
+			console.log($(this)	);
+			if ($oldDiv.attr('x') === $currentDiv.attr('x') && $oldDiv.attr('y') === $currentDiv.attr('y')) {
+			} else {
+				console.log('different')
+				var thisSector = findSector($oldDiv.attr('x'),$oldDiv.attr('y'));
+				if (!thisSector.opened){
+					resetDiv($oldDiv);
+				};
+				if (!rightButtonDown) {
+					activateDiv($currentDiv);
+				};
+			};
+		};
+
+		var mouseOutCheck = function(event){
+			console.log('mouse LEAVE');
+		};
+
+		var resetDiv = function(theDiv) {
+			theDiv.css({'border-style': 'outset', 'border-color':'grey'});
+		};
+
+		var activateDiv = function(theDiv) {
+			theDiv.css({'border-style': 'inset', 'border-color':'lightgrey'});
+		};
+
+		function Sector(bombStatus){
+			this.isBomb = bombStatus;
+			this.isFlagged = false;
+			this.opened = false;
+			this.x = null;
+			this.y = null;
+		};
+	</script>
+	<style>
+		#start_form_wrapper {
+			width: 200px;
+			margin: 0 auto 10px;
+		}
+		#settings label {
+			float: left;
+		}
+		#settings input {
+			width: 35px;
+			float: right;
+		}
+		#game_button_wrapper {
+			width: 240px;
+			margin: 0 auto;
+		}
+		#game_button{
+			float: left;
+		}
+		#settings_show_button {
+			float: right;
+		}
+		#settings_hide_button {
+			float: right;
+		}
+		#minefield {
+			margin: 0 auto;
+			background-color: #ededed;
+		}
+		.row {
+			height:38px;
+		}
+		.sector {
+			height:30px;
+			width:30px;
+			background-color: lightgrey;
+			border: 4px outset grey;
+			float: left;
+			text-align: center;
+			font-size: 1.5em;
+			font-weight: bold;
+			line-height: 30px;
+		}
+		.clearfix {
+			clear: both;
+		}
+	</style>
+</head>
+<body>
+	<div id="start_form_wrapper">
+		<form action="/create_board" id = "start_form">
+			<div id = "settings" style = "display: none;">
+				<label for="height">Height :</label>
+				<input id = "height" type="number" name = "height" autofocus = "true" value = "10">
+				</br>
+				</br>
+				<label for="width">Width :</label>
+				<input id = "width" type="number" name = "width" value = "10">
+				</br>
+				</br>
+				<label for="number_of_bombs">Number of bombs :</label>
+				<input id = "number_of_bombs" type="number" name = "number_of_bombs" value = "18">
+				</br>
+				</br>
+			</div>
+			<div id = "game_button_wrapper">
+				<input  id = "game_button" type="submit" value = "New Game">
+				<button id = "settings_show_button">Show Settings</button>
+				<button id = "settings_hide_button" style = "display: none;">Hide Settings</button>
+			</div>
+		</form>
+	</div>
+	<div class="clearfix"></div>
+	<div id="minefield" oncontextmenu="return false;"></div>
+	<template id="row">
+		<div class="row clearfix"></div>
+	</template>
+</body>
+</html>
