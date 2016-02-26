@@ -11,6 +11,7 @@
 		var rightButtonDown = false;
 		var bothButtonDown = false;
 		var clickLock = false;
+		var bombCount = 18;
 		$(document).on('ready page:load', function(){
 
 			$('#settings_show_button').on('click', function(){
@@ -42,7 +43,7 @@
 					if (event.which === 1) {
 						leftButtonDown = true;
 						var thisSector = findSector($(this).attr('x'),$(this).attr('y'));
-						if (thisSector.isFlagged === false) {
+						if (thisSector.isFlagged === 0 || thisSector.isFlagged === 2) {
 							activateDiv($currentDiv);
 						}
 					} else if (event.which === 3) {
@@ -119,7 +120,7 @@
 			// 	};
 			// });
 
-			create_board(10, 10, 10);
+			create_board(10, 10, 18);
 		});	
 
 		var minefield = [];
@@ -128,10 +129,11 @@
 			minefield = [];
 			$('#minefield').empty();
 			var sectors = [];
-			var bombCount = numberOfBombs;
+			bombCount = numberOfBombs;
+			var newBombCount = numberOfBombs;
 			for (var i = 0; i < height*width; i++) {
-				sectors.push(new Sector(bombCounter(bombCount)));
-				bombCount--;
+				sectors.push(new Sector(bombCounter(newBombCount)));
+				newBombCount--;
 			};
 			sectors.sort(function() {
 			  return .5 - Math.random();
@@ -153,6 +155,7 @@
 				};
 			};
 			$('#minefield').css({"height" : (minefield.length*38 + "px"),"width" : (minefield[0].length*38 + "px")});
+			setBomobCount();
 			gameRunning = true;
 		};
 
@@ -180,7 +183,7 @@
 			} else {
 				for (var i = 0; i < minefield.length; i++) {
 					for (var j = 0; j < minefield[i].length; j++) {
-						if (minefield[i][j].isBomb === true && minefield[i][j].isFlagged === false){
+						if (minefield[i][j].isBomb === true && minefield[i][j].isFlagged === 0 || minefield[i][j].isFlagged === 2){
 							flagToggle(minefield[i][j]);
 						};
 					};
@@ -225,7 +228,7 @@
 				if (minefield[neighbors[i][0]][neighbors[i][1]].isBomb === true) {
 					bombNumber++;
 				};
-				if (minefield[neighbors[i][0]][neighbors[i][1]].isFlagged === true) {
+				if (minefield[neighbors[i][0]][neighbors[i][1]].isFlagged === 1) {
 					flagNumber++;
 				};
 			};
@@ -237,7 +240,7 @@
 			var neighborsObjects = findneighborsObjects(neighbors);
 			for (var i = 0; i < neighborsObjects.length; i++) {
 				var $thediv = $("#minefield>.row>.sector[x='" + neighborsObjects[i].x + "'][y='" + neighborsObjects[i].y + "']");
-				if (neighborsObjects[i].isFlagged === true || neighborsObjects[i].opened === true){
+				if (neighborsObjects[i].isFlagged === 1 || neighborsObjects[i].opened === true){
 				} else if (neighborsObjects[i].isBomb === true) {
 					endGame($thediv);
 					gameRunning = false;
@@ -281,22 +284,36 @@
 			    return (item[0] >= 0 && item[0] < minefield.length && item[1] >= 0 && item[1] < minefield[0].length);
 			});
 			return realNeighbors;
-		}
+		};
+
+		var setBomobCount = function(){
+			$("#bomb_counter").text("bombs left: " + bombCount)
+		};
 
 		var flagToggle = function(thisSector) {
 			var $thediv = $("#minefield>.row>.sector[x='" + thisSector.x + "'][y='" + thisSector.y + "']");
-			if (thisSector.isFlagged === false && thisSector.opened === false) {
-				thisSector.isFlagged = true;
+			if (thisSector.isFlagged === 0 && thisSector.opened === false) {
+				thisSector.isFlagged = 1;
 				$thediv.css('color', 'red');
 				$thediv.text('P');
+				bombCount--;
+				setBomobCount();
 				// resetDiv($currentDiv);
-			} else if (thisSector.isFlagged === true && thisSector.opened === false) {
-				thisSector.isFlagged = false;
+			} else if (thisSector.isFlagged === 1 && thisSector.opened === false) {
+				thisSector.isFlagged = 2;
+				$thediv.css('color', 'orange');
+				$thediv.text('?');
+				bombCount++;
+				setBomobCount();
+				// resetDiv($currentDiv);
+			} else if (thisSector.isFlagged === 2 && thisSector.opened === false) {
+				thisSector.isFlagged = 0;
 				$thediv.css('color', 'black');
 				$thediv.text('');
 				// resetDiv($currentDiv);
 			};
 		};
+
 		var mouseOverCheck =  function(event) {
 			$oldDiv = $currentDiv;
 			console.log('mouse ENTER');
@@ -331,7 +348,7 @@
 
 		function Sector(bombStatus){
 			this.isBomb = bombStatus;
-			this.isFlagged = false;
+			this.isFlagged = 0;
 			this.opened = false;
 			this.x = null;
 			this.y = null;
@@ -339,7 +356,7 @@
 	</script>
 	<style>
 		#start_form_wrapper {
-			width: 200px;
+			width: 350px;
 			margin: 0 auto 10px;
 		}
 		#settings label {
@@ -350,17 +367,21 @@
 			float: right;
 		}
 		#game_button_wrapper {
-			width: 240px;
+			width: 350px;
 			margin: 0 auto;
 		}
 		#game_button{
-			float: left;
+			float: right;
 		}
 		#settings_show_button {
-			float: right;
+			float: left;
 		}
 		#settings_hide_button {
+			float: left;
+		}
+		#bomb_counter{
 			float: right;
+			margin-left: 20px;
 		}
 		#minefield {
 			margin: 0 auto;
@@ -403,9 +424,10 @@
 				</br>
 			</div>
 			<div id = "game_button_wrapper">
-				<input  id = "game_button" type="submit" value = "New Game">
 				<button id = "settings_show_button">Show Settings</button>
 				<button id = "settings_hide_button" style = "display: none;">Hide Settings</button>
+				<div id = "bomb_counter">00</div>
+				<input  id = "game_button" type="submit" value = "New Game">
 			</div>
 		</form>
 	</div>
