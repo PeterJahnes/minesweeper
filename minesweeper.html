@@ -105,7 +105,7 @@
 					};
 				};
 				$('#minefield').off('mouseenter','.sector', mouseOverCheck);
-				$('#minefield').off('mouseleave','.sector',mouseOutCheck);
+				$('#minefield').off('mouseleave','.sector', mouseOutCheck);
 			});
 
 			// $('#minefield').on('mouseover','.sector', function(event){
@@ -161,10 +161,22 @@
 
 		var endGame = function(theSector){
 			if (gameRunning === true) {
-				theSector.css({'border-style': 'inset', 'border-color':'lightgrey', 'font-size':'3em', 'line-height' : '45px', 'background-color':'red'});
+				theSector.css({'border-style': 'inset', 'border-color':'lightgrey', 'font-size':'3em', 'line-height' : '42px', 'color':'black', 'background-color':'red'});
 				theSector.text('*');
 				$('#minefield').off('mouseenter','.sector', mouseOverCheck);
 				$('#minefield').off('mouseleave','.sector',mouseOutCheck);
+				for (var i = 0; i < minefield.length; i++) {
+					for (var j = 0; j < minefield[i].length; j++) {
+						var $thediv = $("#minefield>.row>.sector[x='" + minefield[i][j].x + "'][y='" + minefield[i][j].y + "']");
+						if (minefield[i][j].isBomb === true && minefield[i][j].isFlagged === 0) {
+							$thediv.css({'border-style': 'inset', 'border-color':'lightgrey', 'font-size':'3em', 'line-height' : '42px', 'color':'black', 'background-color':'red'});
+							$thediv.text('*');
+						} else if (minefield[i][j].isBomb === false && minefield[i][j].isFlagged === 1){
+							$thediv.css({'border-style': 'inset', 'border-color':'lightgrey', 'color':'black', 'background-color':'red'});
+							$thediv.text('X');
+						};
+					};
+				};
 				alert('game over man!');
 			};
 		};
@@ -247,7 +259,7 @@
 				} else {
 					neighborsObjects[i].opened = true;
 					$thediv.text(checkNeighbor(neighborsObjects[i]));
-					$thediv.css({'border-style': 'inset', 'border-color':'lightgrey'});
+					$thediv.css({'border-style': 'inset', 'color':'black', 'border-color':'lightgrey'});
 				};
 			};
 		};
@@ -343,7 +355,7 @@
 		};
 
 		var activateDiv = function(theDiv) {
-			theDiv.css({'border-style': 'inset', 'border-color':'lightgrey'});
+			theDiv.css({'border-style': 'inset', 'color':'black', 'border-color':'lightgrey'});
 		};
 
 		function Sector(bombStatus){
