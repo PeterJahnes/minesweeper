@@ -14,13 +14,15 @@
 		var bombCount = 18;
 		$(document).on('ready page:load', function(){
 
-			$('#settings_show_button').on('click', function(){
+			$('#settings_show_button').on('click', function(event){
+				event.preventDefault();
 				$('#settings').show();
 				$('#settings_show_button').hide();
 				$('#settings_hide_button').show();
 			});
 
 			$('#settings_hide_button').on('click', function(){
+				event.preventDefault();
 				$('#settings').hide();
 				$('#settings_hide_button').hide();
 				$('#settings_show_button').show();
