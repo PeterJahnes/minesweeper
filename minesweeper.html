@@ -12,136 +12,142 @@
 		var bothButtonDown = false;
 		var clickLock = false;
 		var bombCount = 18;
+		var startTime = new Date();
+		var timerInterval = null;
+		var difficulty = 0;
 		$(document).on('ready page:load', function(){
 
-			$('#settings_show_button').on('click', function(){
-				$('#settings').show();
-				$('#settings_show_button').hide();
-				$('#settings_hide_button').show();
-			});
+			$('#settings_show_button').on('click', showSettingsPrep );
 
-			$('#settings_hide_button').on('click', function(){
-				$('#settings').hide();
-				$('#settings_hide_button').hide();
-				$('#settings_show_button').show();
-			});
+			$('#settings_hide_button').on('click', hideSettingsPrep );
 
-			$('#start_form').on('submit', function(event){
+			$('#small').on('click', function(){
 				event.preventDefault();
-				var height = $('#height').val();
-				var width = $('#width').val();
-				var numberOfBombs = $('#number_of_bombs').val();
-				create_board(height, width, numberOfBombs);
+				lockInputs();
+				setSettingsView([10,10,18]);
 			});
 
-			$('#minefield').on('mousedown','.sector', function(event){
+			$('#medium').on('click', function(){
 				event.preventDefault();
-				$currentDiv = $(this);
-				$('#minefield').on('mouseenter', '.sector', mouseOverCheck );
-				$('#minefield').on('mouseleave', '.sector', mouseOutCheck );
-				if (gameRunning === true) {
-					if (event.which === 1) {
-						leftButtonDown = true;
-						var thisSector = findSector($(this).attr('x'),$(this).attr('y'));
-						if (thisSector.isFlagged === 0 || thisSector.isFlagged === 2) {
-							activateDiv($currentDiv);
-						}
-					} else if (event.which === 3) {
-						rightButtonDown = true;
-					};
-				};
+				lockInputs();
+				setSettingsView([15,20,60]);
 			});
 
-			$('#minefield').on('mouseup','.sector', function(event){
+			$('#large').on('click', function(){
 				event.preventDefault();
-				var activeDiv = $(this);
-				var thisSector = findSector($(this).attr('x'),$(this).attr('y'));
-				if (gameRunning === true) {
-					if (clickLock === false) {
-						if (event.which === 1) {
-							if (rightButtonDown === true) {
-								console.log('1');
-								bothButtonDown = true;
-								leftButtonDown = false;
-							} else if (bothButtonDown === true) {
-								console.log('2');
-								checkNeighborBombCount(thisSector,activeDiv);
-								bothButtonDown = false;
-								leftButtonDown = false;
-							} else {
-								if (thisSector.isBomb === true) {
-								console.log('3');
-									endGame($(this));
-									gameRunning = false;
-								} else {
-								console.log('4');
-									thisSector.opened = true;
-									$(this).text(checkNeighbor(thisSector));
-								};
-								console.log('5');
-								leftButtonDown = false;
-							};
-						} else if (event.which === 3) {
-							if (leftButtonDown === true) {
-								console.log('6');
-								bothButtonDown = true;
-								rightButtonDown = false;
-							} else if (bothButtonDown === true) {
-								console.log('7');
-								checkNeighborBombCount(thisSector,activeDiv);
-								bothButtonDown = false;
-								rightButtonDown = false;
-							} else {
-								console.log('8');
-								flagToggle(thisSector);
-								rightButtonDown = false;
-							};
-						};
-						$currentDiv = null;
-						wonGame();
-					} else {
-						resetDiv($currentDiv);
-						wonGame();
-					};
-				};
-				$('#minefield').off('mouseenter','.sector', mouseOverCheck);
-				$('#minefield').off('mouseleave','.sector', mouseOutCheck);
+				lockInputs();
+				setSettingsView([20,30,105]);
 			});
 
-			// $('#minefield').on('mouseover','.sector', function(event){
-			// 	if (rightButtonDown === true || leftButtonDown === true) {
-			// 		if ( this.isEqualNode($currentDiv)) {
-			// 			clickLock = false;
-			// 			console.log('clickLock false')
-			// 		} else {
-			// 			clickLock = true;
-			// 			console.log('clickLock true')
-			// 		};
-			// 	};
-			// });
+			$('#custom').on('click', function(){
+				event.preventDefault();
+				freeInputs();
+			});
 
-			create_board(10, 10, 18);
+			$('#start_form').on('submit', startTheGameForm );
+
+			startTheGame();
 		});	
 
 		var minefield = [];
 
-		var create_board = function(height, width, numberOfBombs){
+		var settings = [10,10,18];
+
+		var startGame = function(){
+			$('#minefield').on('mousedown','.sector', mouseDownAction );
+			$('#minefield').on('mouseup','.sector', mouseUpAction );
+		};
+
+		var hideSettingsPrep = function(event){
+			event.preventDefault();
+			hideSettings();
+		};
+
+		var hideSettings = function(){
+			$('#settings').hide();
+			$('#settings_hide_button').hide();
+			$('#settings_show_button').show();
+		};
+
+		var showSettingsPrep = function(event){
+			event.preventDefault();
+			showSettings();
+		};
+
+		var showSettings = function(){
+			$('#settings').show();
+			$('#settings_show_button').hide();
+			$('#settings_hide_button').show();
+		};
+
+		var startTheGameForm = function(event){
+			event.preventDefault();
+			startTheGame();
+		};
+
+		var startTheGame = function(){
+			readSettings();
+			create_board(settings);
+			startGame();
+			closeEndGameModal();
+			hideSettings();
+		};
+
+		var startTimer = function(){
+			startTime = new Date();
+			console.log(startTime);
+			timerInterval = setInterval(function(){ displayTimer() }, 1000);
+		};
+
+		var displayTimer = function(){
+			var timeToDisplay = timeElapsed().toString();
+			$('#timer_div').text( "000".substring(0, 3 - timeToDisplay.length) + timeToDisplay + ' seconds');
+		};
+
+		var readSettings = function(){
+			settings[0] = $('#height').val();
+			settings[1] = $('#width').val();
+			settings[2] = $('#number_of_bombs').val();
+			difficulty = settings[0] * settings[1] / settings[2]
+		};
+
+		var setSettingsView = function(newSettings){
+			$('#height').val(newSettings[0]);
+			$('#width').val(newSettings[1]);
+			$('#number_of_bombs').val(newSettings[2]);
+			settings = newSettings;
+		};
+
+		var lockInputs = function(){
+			$('#height').prop('disabled', true);
+			$('#width').prop('disabled', true);
+			$('#number_of_bombs').prop('disabled', true);
+		};
+
+		var freeInputs = function(){
+			$('#height').prop('disabled', false);
+			$('#width').prop('disabled', false);
+			$('#number_of_bombs').prop('disabled', false);
+		};
+
+		var create_board = function(){
+			readSettings();
 			minefield = [];
 			$('#minefield').empty();
 			var sectors = [];
-			bombCount = numberOfBombs;
-			var newBombCount = numberOfBombs;
-			for (var i = 0; i < height*width; i++) {
+			bombCount = settings[2];
+			var newBombCount = settings[2];
+			for (var i = 0; i < settings[0]*settings[1]; i++) {
 				sectors.push(new Sector(bombCounter(newBombCount)));
 				newBombCount--;
 			};
 			sectors.sort(function() {
 			  return .5 - Math.random();
 			});
-			for (var i = 0; i < height; i++) {
+			for (var i = 0; i < settings[0]; i++) {
 				minefield.push([]);
 				$('#minefield').append($('#row').html());
-				for (var k = 0; k < width; k++) {
+				for (var k = 0; k < settings[1]; k++) {
 					var newSector = sectors.pop();
 					newSector.x = i;
 					newSector.y = k;
@@ -156,29 +162,30 @@
 			};
 			$('#minefield').css({"height" : (minefield.length*38 + "px"),"width" : (minefield[0].length*38 + "px")});
 			setBomobCount();
-			gameRunning = true;
+			$('#timer_div').text( '000 seconds');
+			clearInterval(timerInterval);
 		};
 
-		var endGame = function(theSector){
-			if (gameRunning === true) {
-				theSector.css({'border-style': 'inset', 'border-color':'lightgrey', 'font-size':'3em', 'line-height' : '42px', 'color':'black', 'background-color':'red'});
-				theSector.text('*');
-				$('#minefield').off('mouseenter','.sector', mouseOverCheck);
-				$('#minefield').off('mouseleave','.sector',mouseOutCheck);
-				for (var i = 0; i < minefield.length; i++) {
-					for (var j = 0; j < minefield[i].length; j++) {
-						var $thediv = $("#minefield>.row>.sector[x='" + minefield[i][j].x + "'][y='" + minefield[i][j].y + "']");
-						if (minefield[i][j].isBomb === true && minefield[i][j].isFlagged === 0) {
-							$thediv.css({'border-style': 'inset', 'border-color':'lightgrey', 'font-size':'3em', 'line-height' : '42px', 'color':'black', 'background-color':'red'});
-							$thediv.text('*');
-						} else if (minefield[i][j].isBomb === false && minefield[i][j].isFlagged === 1){
-							$thediv.css({'border-style': 'inset', 'border-color':'lightgrey', 'color':'black', 'background-color':'red'});
-							$thediv.text('X');
-						};
+		var endGame = function(theSector){				
+			$('#minefield').off('mouseenter','.sector', mouseOverCheck);
+			$('#minefield').off('mouseleave','.sector',mouseOutCheck);
+			for (var i = 0; i < minefield.length; i++) {
+				for (var j = 0; j < minefield[i].length; j++) {
+					var $thediv = $("#minefield>.row>.sector[x='" + minefield[i][j].x + "'][y='" + minefield[i][j].y + "']");
+					if (minefield[i][j].isBomb === true && minefield[i][j].isFlagged === 0) {
+						$thediv.css({'border-style': 'inset', 'border-color':'lightgrey', 'font-size':'3em', 'line-height' : '42px', 'color':'black', 'background-color':'red'});
+						$thediv.text('*');
+					} else if (minefield[i][j].isBomb === false && minefield[i][j].isFlagged === 1){
+						$thediv.css({'border-style': 'inset', 'border-color':'lightgrey', 'color':'black', 'background-color':'red'});
+						$thediv.text('X');
 					};
 				};
-				alert('game over man!');
 			};
+			theSector.css({'border-style': 'inset', 'border-color':'lightgrey', 'font-size':'2em', 'line-height' : '28px', 'color':'black', 'background-color':'red'});
+			theSector.text('O');
+			$('#minefield').off('mousedown','.sector', mouseDownAction );
+			$('#minefield').off('mouseup','.sector', mouseUpAction );
+			gameOverDiv();
 		};
 
 		var wonGame = function() {
@@ -201,10 +208,60 @@
 					};
 				};
 				gameRunning = false;
+				$('#minefield').off('mousedown','.sector', mouseDownAction );
+				$('#minefield').off('mouseup','.sector', mouseUpAction );
 				$('#minefield').off('mouseenter','.sector', mouseOverCheck);
 				$('#minefield').off('mouseleave','.sector',mouseOutCheck);
-				alert('you win!');
+				youWinDiv();
 			};
+		};
+
+		var youWinDiv = function(){
+			modalOpen( "win" );
+			$('#result h1').text('You Win!');
+		};
+
+		var gameOverDiv = function(){
+			modalOpen( "lose" );
+			$('#result h1').text('Game Over Man!');
+		};
+
+		var modalOpen = function(status){
+			postTime();
+			clearInterval(timerInterval);
+			$('#black_out_div').css({'z-index': '10', 'display' : 'block'});
+			$('#game_status_div').css({'z-index': '11', 'display' : 'block'});
+			$('#black_out_div').on('click', closeEndGameModal );
+			$('#modal_cancel_new_game').on('click', closeEndGameModal );
+			$('#modal_change_settings_game').on('click', changeSettings );
+			$('#modal_new_game').on('click', startTheGame );
+		};
+
+		var postTime = function(){
+			$('#result h2').text('Time : ' + timeElapsed().toString() + ' seconds');
+			$('#result h3').text('Difficulty : ' + difficulty.toFixed(2).toString());
+		};
+
+		var timeElapsed = function(){
+			var nowTime = new Date();
+			var differenceTime = Math.round((nowTime.getTime() - startTime.getTime()) / 1000);
+			return differenceTime;
+		};
+
+		var changeSettings = function(event){
+			event.preventDefault();
+			closeEndGameModal();
+			showSettings();
+		};
+
+		var closeEndGameModal = function(){
+			event.preventDefault();
+			$('#black_out_div').css({'z-index': '-10', 'display' : 'none'});
+			$('#game_status_div').css({'z-index': '-9', 'display' : 'none'});
+			$('#black_out_div').off('click', closeEndGameModal );
+			$('#modal_cancel_new_game').off('click', closeEndGameModal );
+			$('#modal_change_settings_game').off('click', changeSettings );
+			$('#modal_new_game').off('click', startTheGame );
 		};
 
 		var bombCounter = function(number){
@@ -280,6 +337,7 @@
 					bombNumber++;
 				};
 			};
+			gameRunning = true;
 			if (bombNumber === 0) {
 				openNeighbors(sector);
 				return '';
@@ -326,6 +384,79 @@
 			};
 		};
 
+		var mouseDownAction = function(event) {
+			event.preventDefault();
+			$currentDiv = $(this);
+			if ( !gameRunning ) startTimer();
+			$('#minefield').on('mouseenter', '.sector', mouseOverCheck );
+			$('#minefield').on('mouseleave', '.sector', mouseOutCheck );
+			if (event.which === 1) {
+				leftButtonDown = true;
+				var thisSector = findSector($(this).attr('x'),$(this).attr('y'));
+				if (thisSector.isFlagged === 0 || thisSector.isFlagged === 2) {
+					activateDiv($currentDiv);
+				}
+			} else if (event.which === 3) {
+				rightButtonDown = true;
+			};
+		};
+
+		var mouseUpAction = function(event){
+			event.preventDefault();
+			var activeDiv = $(this);
+			var thisSector = findSector($(this).attr('x'),$(this).attr('y'));
+			if (clickLock === false) {
+				if (event.which === 1) {
+					if (rightButtonDown === true) {
+						console.log('1');
+						bothButtonDown = true;
+						leftButtonDown = false;
+					} else if (bothButtonDown === true) {
+						console.log('2');
+						checkNeighborBombCount(thisSector,activeDiv);
+						bothButtonDown = false;
+						leftButtonDown = false;
+					} else {
+						if (thisSector.isBomb === true && thisSector.isFlagged !== 1) {
+						console.log('3');
+							endGame($(this));
+							gameRunning = false;
+						} else if (thisSector.isFlagged === 1) {
+							console.log('flagged')
+						} else {
+						console.log('4');
+							thisSector.opened = true;
+							$(this).text(checkNeighbor(thisSector));
+						};
+						console.log('5');
+						leftButtonDown = false;
+					};
+				} else if (event.which === 3) {
+					if (leftButtonDown === true) {
+						console.log('6');
+						bothButtonDown = true;
+						rightButtonDown = false;
+					} else if (bothButtonDown === true) {
+						console.log('7');
+						checkNeighborBombCount(thisSector,activeDiv);
+						bothButtonDown = false;
+						rightButtonDown = false;
+					} else {
+						console.log('8');
+						flagToggle(thisSector);
+						rightButtonDown = false;
+					};
+				};
+				$currentDiv = null;
+				wonGame();
+			} else {
+				resetDiv($currentDiv);
+				wonGame();
+			};
+			$('#minefield').off('mouseenter','.sector', mouseOverCheck);
+			$('#minefield').off('mouseleave','.sector', mouseOutCheck);
+		};
+
 		var mouseOverCheck =  function(event) {
 			$oldDiv = $currentDiv;
 			console.log('mouse ENTER');
@@ -355,7 +486,7 @@
 		};
 
 		var activateDiv = function(theDiv) {
-			theDiv.css({'border-style': 'inset', 'color':'black', 'border-color':'lightgrey'});
+			theDiv.css({'border-style': 'inset', 'border-color':'lightgrey'});
 		};
 
 		function Sector(bombStatus){
@@ -368,18 +499,19 @@
 	</script>
 	<style>
 		#start_form_wrapper {
-			width: 350px;
+			width: 420px;
 			margin: 0 auto 10px;
 		}
 		#settings label {
 			float: left;
 		}
 		#settings input {
-			width: 35px;
+			width: 42px;
 			float: right;
+			text-align: center;
 		}
 		#game_button_wrapper {
-			width: 350px;
+			width: 420px;
 			margin: 0 auto;
 		}
 		#game_button{
@@ -395,9 +527,66 @@
 			float: right;
 			margin-left: 20px;
 		}
+		#timer_div{
+			float: left;
+			margin-right: 20px;
+		}
 		#minefield {
 			margin: 0 auto;
 			background-color: #ededed;
+		}
+		#black_out_div{
+			position: fixed;
+			top: 0;
+			left: 0;
+			height: 100%;
+			width: 100%;
+			opacity: 0.3;
+			background-color: black;
+		}
+		#game_status_div {
+			position: fixed;
+			top: 25%;
+			left: 25%;
+			height: 50%;
+			width: 50%;
+			background-color: white;
+		}
+		#result{
+			position: relative;
+			margin: 0% auto;
+			height: 65%;
+			width: 60%;
+    	box-sizing: border-box;
+    	padding: 2%;
+		}
+		#modal_buttons{
+			position: relative;
+    	box-sizing: border-box;
+			height: 35%;
+			width: 100%;
+		}
+		#modal_new_game{
+			width: 28.8%;
+		}
+		#modal_cancel_new_game{
+			width: 19.5%;
+		}
+		#modal_change_settings_game{
+			width: 40.9%;
+		}
+		.modal_button{
+			position: relative;
+    	box-sizing: border-box;
+			height: 80%;
+			margin: 0% 1.8% 0% 1.8%;
+			background-color: blue;
+			float: left;
+			border: 4px outset lightblue;
+			text-align: center;
+			font-size: 180%;
+			font-weight: bold;
+			line-height: 200%;
 		}
 		.row {
 			height:38px;
@@ -434,12 +623,23 @@
 				<input id = "number_of_bombs" type="number" name = "number_of_bombs" value = "18">
 				</br>
 				</br>
+				<div>
+					<button id = "small">Small</button>
+					<button id = "medium">Medium</button>
+					<button id = "large">Large</button>
+					<button id = "custom">Custom</button>
+				</div>
+				</br>
 			</div>
 			<div id = "game_button_wrapper">
-				<button id = "settings_show_button">Show Settings</button>
-				<button id = "settings_hide_button" style = "display: none;">Hide Settings</button>
-				<div id = "bomb_counter">00</div>
-				<input  id = "game_button" type="submit" value = "New Game">
+				<div>
+					<div id = "timer_div">000 seconds</div>
+					<button id = "settings_show_button">Show Settings</button>
+					<button id = "settings_hide_button" style = "display: none;">Hide Settings</button>
+					<div id = "bomb_counter">00</div>
+					<input  id = "game_button" type="submit" value = "New Game">
+				</br>
+				</div>
 			</div>
 		</form>
 	</div>
@@ -448,5 +648,14 @@
 	<template id="row">
 		<div class="row clearfix"></div>
 	</template>
+	<div id = "black_out_div" style = "display: none; z-index: -10;">	</div>
+	<div id = "game_status_div" style = "display: none; z-index: -9;">
+		<div id = "result"><h1></h1><h2></h2><h3></h3></div>
+		<div id = "modal_buttons">
+			<div id = "modal_new_game" class = "modal_button">New Game</div>
+			<div id = "modal_cancel_new_game" class = "modal_button">Cancel</div>
+			<div id = "modal_change_settings_game" class = "modal_button">Change Settings</div>
+		</div>
+	</div>
 </body>
 </html>
