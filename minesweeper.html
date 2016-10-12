@@ -2,7 +2,151 @@
 <html>
 <head>
 	<title>minesweeper</title>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/foundation/6.2.4-rc1/foundation.min.css">
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+	<style>
+		#start_form_wrapper {
+			width: 800px;
+			margin: 0 auto 10px;
+		}
+		#settings label {
+			float: left;
+			word-wrap: normal;
+		}
+		#settings input {
+			width: 110px;
+			float: right;
+			text-align: center;
+		}
+		#game_settings_wrapper{
+			width: 350px;
+			margin: 0 auto;
+		}
+		#game_button_wrapper {
+			width: 500px;
+			margin: 0 auto;
+		}
+		#game_button{
+			float: right;
+		}
+		#settings_show_button {
+			float: left;
+		}
+		#settings_hide_button {
+			float: left;
+		}
+		#bomb_counter{
+			float: right;
+			margin-left: 20px;
+		}
+		#timer_div{
+			float: left;
+			margin-right: 20px;
+		}
+		#minefield {
+			margin: 0 auto;
+			background-color: #ededed;
+		}
+		#black_out_div{
+			position: fixed;
+			top: 0;
+			left: 0;
+			height: 100%;
+			width: 100%;
+			opacity: 0.3;
+			background-color: black;
+		}
+		#game_status_div {
+			position: fixed;
+			top: 25%;
+			left: 25%;
+			height: 50%;
+			width: 50%;
+			background-color: white;
+		}
+		.minesweeper_row {
+			height:38px;
+		}
+		.sector {
+			height:38px;
+			width:38px;
+			background-color: lightgrey;
+			border: 4px outset grey;
+			float: left;
+			text-align: center;
+			font-size: 1.5em;
+			font-weight: bold;
+			line-height: 30px;
+		}
+		.clearfix {
+			clear: both;
+		}
+	</style>
+</head>
+<body>
+	<div id="start_form_wrapper">
+		<form action="#" id = "start_form">
+			<div id = "settings" style = "display: none;">
+				<div class="row">
+					<div class="large-4 columns">
+						<label for="height">Height :</label>
+						<input id = "height" type="number" name = "height" autofocus = "true" value = "10">
+					</div>
+					<div class="large-4 columns">
+						<label for="width">Width :</label>
+						<input id = "width" type="number" name = "width" value = "10">	
+					</div>
+					<div class="large-4 columns">
+						<label for="number_of_bombs">Number of bombs :</label>
+						<input id = "number_of_bombs" type="number" name = "number_of_bombs" value = "18">
+					</div>
+				</div>
+				<div id="game_settings_wrapper">
+					<div class="button-group">
+						<button type="button" class="success button settings_button" id = "small">Small</button>
+						<button type="button" class="button settings_button" id = "medium">Medium</button>
+						<button type="button" class="button settings_button" id = "large">Large</button>
+						<button type="button" class="button settings_button" id = "custom">Custom</button>
+					</div>
+				</div>
+			</div>
+			<div id = "game_button_wrapper">
+				<div>
+					<div id = "timer_div">000 seconds</div>
+					<button type="button" class="active button" id = "settings_show_button">Show Settings</button>
+					<button type="button" class="active button" id = "settings_hide_button" style = "display: none;">Hide Settings</button>
+					<div id = "bomb_counter">00</div>
+					<input type="button" class="active button" id = "game_button" type="submit" value = "New Game">
+					</br>
+				</div>
+			</div>
+		</form>
+	</div>
+	<div class="clearfix"></div>
+	<div id="minefield" oncontextmenu="return false;"></div>
+	<template id="row">
+		<div class="minesweeper_row clearfix"></div>
+	</template>
+	<div class="reveal" id="game_status_div" data-reveal>
+		<div id = "result" class="row">
+			<div class="large-6 columns"><h1></h1></div>
+			<div class="large-6 columns">
+				<h2></h2>
+				<h3></h3>
+			</div>
+		</div>
+		<div class="row">
+			<div class="large-8 large-centered columns">
+				<div class="expanded button-group">
+					<div id = "modal_new_game" class = "active button">New Game</div>
+					<div id = "modal_cancel_new_game" class = "active button">Cancel</div>
+					<div id = "modal_change_settings_game" class = "active button">Change Settings</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script src="https://cdn.jsdelivr.net/foundation/6.2.1/foundation.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/foundation/6.2.1/js/foundation.reveal.js"></script>
 	<script type="text/javascript">
 		var gameRunning = false;
 		var $currentDiv = null;
@@ -24,29 +168,35 @@
 			$('#small').on('click', function(){
 				event.preventDefault();
 				lockInputs();
+				activateSettingsButton($(this));
 				setSettingsView([10,10,18]);
 			});
 
 			$('#medium').on('click', function(){
 				event.preventDefault();
 				lockInputs();
+				activateSettingsButton($(this));
 				setSettingsView([15,20,60]);
 			});
 
 			$('#large').on('click', function(){
 				event.preventDefault();
 				lockInputs();
+				activateSettingsButton($(this));
 				setSettingsView([20,30,105]);
 			});
 
 			$('#custom').on('click', function(){
 				event.preventDefault();
+				activateSettingsButton($(this));
 				freeInputs();
 			});
 
-			$('#start_form').on('submit', startTheGameForm );
+			$('#game_button').on('click', startTheGameForm );
 
+			lockInputs();
 			startTheGame();
+			$(document).foundation();
 		});	
 
 		var minefield = [];
@@ -69,8 +219,14 @@
 			$('#settings_show_button').show();
 		};
 
+		var activateSettingsButton = function(current_button){
+			current_button.siblings().removeClass('success');
+			current_button.addClass('success');
+		};
+
 		var showSettingsPrep = function(event){
 			event.preventDefault();
+			console.log('yo you clicked it');
 			showSettings();
 		};
 
@@ -81,21 +237,30 @@
 		};
 
 		var startTheGameForm = function(event){
+			gameRunning = false;
 			event.preventDefault();
 			startTheGame();
 		};
 
 		var startTheGame = function(){
+			clearListeners();
 			readSettings();
 			create_board(settings);
 			startGame();
-			closeEndGameModal();
 			hideSettings();
+		};
+
+		var clearListeners = function(){
+				$('#minefield').off('mousedown','.sector', mouseDownAction );
+				$('#minefield').off('mouseup','.sector', mouseUpAction );
+				$('#minefield').off('mouseenter','.sector', mouseOverCheck);
+				$('#minefield').off('mouseleave','.sector',mouseOutCheck);
 		};
 
 		var startTimer = function(){
 			startTime = new Date();
 			console.log(startTime);
+			gameRunning = true;
 			timerInterval = setInterval(function(){ displayTimer() }, 1000);
 		};
 
@@ -171,7 +336,7 @@
 			$('#minefield').off('mouseleave','.sector',mouseOutCheck);
 			for (var i = 0; i < minefield.length; i++) {
 				for (var j = 0; j < minefield[i].length; j++) {
-					var $thediv = $("#minefield>.row>.sector[x='" + minefield[i][j].x + "'][y='" + minefield[i][j].y + "']");
+					var $thediv = $("#minefield>.minesweeper_row>.sector[x='" + minefield[i][j].x + "'][y='" + minefield[i][j].y + "']");
 					if (minefield[i][j].isBomb === true && minefield[i][j].isFlagged === 0) {
 						$thediv.css({'border-style': 'inset', 'border-color':'lightgrey', 'font-size':'3em', 'line-height' : '42px', 'color':'black', 'background-color':'red'});
 						$thediv.text('*');
@@ -183,6 +348,7 @@
 			};
 			theSector.css({'border-style': 'inset', 'border-color':'lightgrey', 'font-size':'2em', 'line-height' : '28px', 'color':'black', 'background-color':'red'});
 			theSector.text('O');
+			gameRunning = false;
 			$('#minefield').off('mousedown','.sector', mouseDownAction );
 			$('#minefield').off('mouseup','.sector', mouseUpAction );
 			gameOverDiv();
@@ -207,7 +373,6 @@
 						};
 					};
 				};
-				gameRunning = false;
 				$('#minefield').off('mousedown','.sector', mouseDownAction );
 				$('#minefield').off('mouseup','.sector', mouseUpAction );
 				$('#minefield').off('mouseenter','.sector', mouseOverCheck);
@@ -217,6 +382,7 @@
 		};
 
 		var youWinDiv = function(){
+			gameRunning = false;
 			modalOpen( "win" );
 			$('#result h1').text('You Win!');
 		};
@@ -229,12 +395,11 @@
 		var modalOpen = function(status){
 			postTime();
 			clearInterval(timerInterval);
-			$('#black_out_div').css({'z-index': '10', 'display' : 'block'});
-			$('#game_status_div').css({'z-index': '11', 'display' : 'block'});
-			$('#black_out_div').on('click', closeEndGameModal );
+			$('#game_status_div').foundation('open');
 			$('#modal_cancel_new_game').on('click', closeEndGameModal );
 			$('#modal_change_settings_game').on('click', changeSettings );
-			$('#modal_new_game').on('click', startTheGame );
+			$('#modal_new_game').on('click', modalNewGame );
+			$('#game_status_div').on('closed.zf.reveal', removeModalListeners);
 		};
 
 		var postTime = function(){
@@ -256,12 +421,20 @@
 
 		var closeEndGameModal = function(){
 			event.preventDefault();
-			$('#black_out_div').css({'z-index': '-10', 'display' : 'none'});
-			$('#game_status_div').css({'z-index': '-9', 'display' : 'none'});
-			$('#black_out_div').off('click', closeEndGameModal );
+			$('#game_status_div').foundation('close');
+			removeModalListeners();
+		};
+
+		var modalNewGame = function(){
+			closeEndGameModal();
+			startTheGame();
+		};
+
+		var removeModalListeners = function(){
 			$('#modal_cancel_new_game').off('click', closeEndGameModal );
 			$('#modal_change_settings_game').off('click', changeSettings );
 			$('#modal_new_game').off('click', startTheGame );
+			$('#game_status_div').off('closed.zf.reveal', removeModalListeners);
 		};
 
 		var bombCounter = function(number){
@@ -308,11 +481,10 @@
 			var neighbors = findNeighbors(thisSector);
 			var neighborsObjects = findneighborsObjects(neighbors);
 			for (var i = 0; i < neighborsObjects.length; i++) {
-				var $thediv = $("#minefield>.row>.sector[x='" + neighborsObjects[i].x + "'][y='" + neighborsObjects[i].y + "']");
+				var $thediv = $("#minefield>.minesweeper_row>.sector[x='" + neighborsObjects[i].x + "'][y='" + neighborsObjects[i].y + "']");
 				if (neighborsObjects[i].isFlagged === 1 || neighborsObjects[i].opened === true){
 				} else if (neighborsObjects[i].isBomb === true) {
 					endGame($thediv);
-					gameRunning = false;
 				} else {
 					neighborsObjects[i].opened = true;
 					$thediv.text(checkNeighbor(neighborsObjects[i]));
@@ -337,7 +509,6 @@
 					bombNumber++;
 				};
 			};
-			gameRunning = true;
 			if (bombNumber === 0) {
 				openNeighbors(sector);
 				return '';
@@ -361,7 +532,7 @@
 		};
 
 		var flagToggle = function(thisSector) {
-			var $thediv = $("#minefield>.row>.sector[x='" + thisSector.x + "'][y='" + thisSector.y + "']");
+			var $thediv = $("#minefield>.minesweeper_row>.sector[x='" + thisSector.x + "'][y='" + thisSector.y + "']");
 			if (thisSector.isFlagged === 0 && thisSector.opened === false) {
 				thisSector.isFlagged = 1;
 				$thediv.css('color', 'red');
@@ -420,7 +591,6 @@
 						if (thisSector.isBomb === true && thisSector.isFlagged !== 1) {
 						console.log('3');
 							endGame($(this));
-							gameRunning = false;
 						} else if (thisSector.isFlagged === 1) {
 							console.log('flagged')
 						} else {
@@ -497,165 +667,5 @@
 			this.y = null;
 		};
 	</script>
-	<style>
-		#start_form_wrapper {
-			width: 420px;
-			margin: 0 auto 10px;
-		}
-		#settings label {
-			float: left;
-		}
-		#settings input {
-			width: 42px;
-			float: right;
-			text-align: center;
-		}
-		#game_button_wrapper {
-			width: 420px;
-			margin: 0 auto;
-		}
-		#game_button{
-			float: right;
-		}
-		#settings_show_button {
-			float: left;
-		}
-		#settings_hide_button {
-			float: left;
-		}
-		#bomb_counter{
-			float: right;
-			margin-left: 20px;
-		}
-		#timer_div{
-			float: left;
-			margin-right: 20px;
-		}
-		#minefield {
-			margin: 0 auto;
-			background-color: #ededed;
-		}
-		#black_out_div{
-			position: fixed;
-			top: 0;
-			left: 0;
-			height: 100%;
-			width: 100%;
-			opacity: 0.3;
-			background-color: black;
-		}
-		#game_status_div {
-			position: fixed;
-			top: 25%;
-			left: 25%;
-			height: 50%;
-			width: 50%;
-			background-color: white;
-		}
-		#result{
-			position: relative;
-			margin: 0% auto;
-			height: 65%;
-			width: 60%;
-    	box-sizing: border-box;
-    	padding: 2%;
-		}
-		#modal_buttons{
-			position: relative;
-    	box-sizing: border-box;
-			height: 35%;
-			width: 100%;
-		}
-		#modal_new_game{
-			width: 28.8%;
-		}
-		#modal_cancel_new_game{
-			width: 19.5%;
-		}
-		#modal_change_settings_game{
-			width: 40.9%;
-		}
-		.modal_button{
-			position: relative;
-    	box-sizing: border-box;
-			height: 80%;
-			margin: 0% 1.8% 0% 1.8%;
-			background-color: blue;
-			float: left;
-			border: 4px outset lightblue;
-			text-align: center;
-			font-size: 180%;
-			font-weight: bold;
-			line-height: 200%;
-		}
-		.row {
-			height:38px;
-		}
-		.sector {
-			height:30px;
-			width:30px;
-			background-color: lightgrey;
-			border: 4px outset grey;
-			float: left;
-			text-align: center;
-			font-size: 1.5em;
-			font-weight: bold;
-			line-height: 30px;
-		}
-		.clearfix {
-			clear: both;
-		}
-	</style>
-</head>
-<body>
-	<div id="start_form_wrapper">
-		<form action="/create_board" id = "start_form">
-			<div id = "settings" style = "display: none;">
-				<label for="height">Height :</label>
-				<input id = "height" type="number" name = "height" autofocus = "true" value = "10">
-				</br>
-				</br>
-				<label for="width">Width :</label>
-				<input id = "width" type="number" name = "width" value = "10">
-				</br>
-				</br>
-				<label for="number_of_bombs">Number of bombs :</label>
-				<input id = "number_of_bombs" type="number" name = "number_of_bombs" value = "18">
-				</br>
-				</br>
-				<div>
-					<button id = "small">Small</button>
-					<button id = "medium">Medium</button>
-					<button id = "large">Large</button>
-					<button id = "custom">Custom</button>
-				</div>
-				</br>
-			</div>
-			<div id = "game_button_wrapper">
-				<div>
-					<div id = "timer_div">000 seconds</div>
-					<button id = "settings_show_button">Show Settings</button>
-					<button id = "settings_hide_button" style = "display: none;">Hide Settings</button>
-					<div id = "bomb_counter">00</div>
-					<input  id = "game_button" type="submit" value = "New Game">
-				</br>
-				</div>
-			</div>
-		</form>
-	</div>
-	<div class="clearfix"></div>
-	<div id="minefield" oncontextmenu="return false;"></div>
-	<template id="row">
-		<div class="row clearfix"></div>
-	</template>
-	<div id = "black_out_div" style = "display: none; z-index: -10;">	</div>
-	<div id = "game_status_div" style = "display: none; z-index: -9;">
-		<div id = "result"><h1></h1><h2></h2><h3></h3></div>
-		<div id = "modal_buttons">
-			<div id = "modal_new_game" class = "modal_button">New Game</div>
-			<div id = "modal_cancel_new_game" class = "modal_button">Cancel</div>
-			<div id = "modal_change_settings_game" class = "modal_button">Change Settings</div>
-		</div>
-	</div>
 </body>
 </html>
